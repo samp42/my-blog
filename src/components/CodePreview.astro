@@ -1,0 +1,127 @@
+---
+import { toHtml } from 'hast-util-to-html';
+import { refractor } from 'refractor';
+import python from 'refractor/python';
+import rust from 'refractor/rust';
+import c from 'refractor/c';
+import cpp from 'refractor/cpp';
+
+// Register languages
+refractor.register(python);
+refractor.register(rust);
+refractor.register(c);
+refractor.register(cpp);
+
+interface Props {
+  id: string;
+  code: string;
+  lang?: string;
+  showLineNumbers?: boolean;
+  lineNumbersStart?: number;
+  fileName?: string;
+  output?: string;
+}
+
+const {
+  id,
+  code,
+  lang = 'python',
+  showLineNumbers = false,
+  lineNumbersStart = 1,
+  fileName,
+  output,
+} = Astro.props;
+
+let highlightedCode = null;
+
+try {
+  highlightedCode = toHtml(refractor.highlight(code.trim(), lang));
+} catch (e) {
+  console.warn(
+    `Could not highlight code for language "${lang}", falling back to plain text`
+  );
+  highlightedCode = toHtml(refractor.highlight(code.trim(), 'text'));
+}
+
+const lineCount = code.split('\n').length;
+---
+<div class='code-snippet-container'>
+<div class='code-snippet-header'>
+  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/python/python-original.svg" class='icon'/>
+  {fileName && <div class='file-name'>{fileName}</div>}
+</div>
+<pre class={`code-snippet-code language-${lang} ${showLineNumbers ? 'line-numbers' : ''}`}>
+<code class={`language-${lang}`} set:html={highlightedCode} />
+</pre>
+{output && <pre class='code-snippet-output'><code set:html={`> ${output}`}/></pre>}
+</div>
+
+{showLineNumbers && (
+  <script is:inline>
+    document.addEventListener('DOMContentLoaded', () => {
+      const preElements = document.querySelectorAll('pre.line-numbers');
+
+      preElements.forEach(pre => {
+        const code = pre.querySelector('code');
+        if (!code) return;
+
+        const lines = code.innerHTML.split('\n');
+        let lineNumbersHtml = '';
+
+        for (let i = 0; i < lines.length; i++) {
+          lineNumbersHtml += `<span></span>`;
+        }
+
+        const lineNumbers = document.createElement('span');
+        lineNumbers.className = 'line-number-rows';
+        lineNumbers.innerHTML = lineNumbersHtml;
+        pre.insertBefore(lineNumbers, code);
+      });
+    });
+  </script>
+)}
+
+<style>
+  .code-snippet-container {
+    position: relative;
+    background-color: #f5f5f5;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+
+  .code-snippet-header {
+    display: flex;
+    align-items: center;
+    padding: 0.25em 0.5em;
+    background-color: #111;
+    border-bottom: 1px solid #ccc;
+    color: white;
+    font-weight: 600;
+    font-size: 0.75em;
+  }
+
+  .icon{
+    width: 20px;
+    height: 20px;
+    vertical-align: middle;
+    margin-right: 0.5em;
+  }
+
+  .code-snippet-code{
+    margin-top: 0;
+    margin-bottom: 0;
+    overflow-x: auto;
+    /* font-family: 'Courier New', Courier, monospace; */
+    font-size: 14px;
+    line-height: 1.375;
+  }
+
+  .code-snippet-output {
+    overflow-x: auto;
+    padding: 0.75em 1.25em;
+    font-size: 14px;
+    line-height: 1.375;
+    margin: 0;
+  }
+</style>
