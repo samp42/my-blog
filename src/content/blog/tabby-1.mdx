@@ -1,0 +1,123 @@
+---
+title: 'Tabby: Exploring Tabular Libraries Under The Hood | Part 1 - Setup'
+description: 'A small implementation of pyarrow/pandas/polars to better understand how they work and how they can be optimized.'
+pubDate: 'May 10 2025'
+heroImage: '/blog-placeholder-5.jpg'
+---
+
+## Introduction
+I recently got my first data science job (Yay!) and we operate on large datasets.
+Dataframes can approach the 100s of GBs, which is a lot more than many personal computers or VMs can handle.
+At this scale, performance issues can have a serious increase in runtime.
+It quickly became obvious that how the data is saved in a dataframe matters a lot too.
+For example, one extra byte per row over hundreds of millions of rows just became hundreds of megabytes.
+Therefore, the data type used but also the memory overhead are extremely important considerations.
+The frameworks that I have come across so far are Pandas, the longstanding go-to, Pyarrow which is another alternative developed by Apache which is now a supported backend by Pandas, and Polars which is the new kid on the block that is written in Rust because Rust is the only acceptable progamming language at the moment.
+In this article, I want to explore how these frameworks represent data and execute common operations with performance in mind.
+Some of the questions I have is how are millions of rows layed out in memory and how do the frameworks make it easy and efficient to add millions of rows more?
+How do common operations like subset selection, filters, joins, concatenations, group by, and drop duplicates work?
+How can these common operations be optimized on modern server hardware?
+
+## Goal
+In light of this, I want to implement the following operations:
+
+- Reading from a file (I'll use CSVs for simplicity even though it's not the best format)
+- Filter based on a boolean condition
+- Join (left and inner) based on specified columns
+- Concat (Append rows)
+- Group by
+- Drop duplicates
+
+I'll implement the operations mentionned above in C++ with a Python wrapper.
+I'll use Pybind11 for the wrapper because both a Reddit user and DeepSeek said so, which makes me confident it's the right way to go.
+First, I'll implement all the operations in a basic, single-threaded fashion.
+Then, I'll some optimizations techniques such as multithreading, SIMD, and perhaps CUDA too to see how much more speed⚡🚀💨 I can get.
+I'll be using Kaggle's <i>Climate Weather Surface of Brazil - Hourly</i><sup>[1](#1)</sup> dataset for different benchmarks as it has a decent volume for testing on a personal machine.
+
+## Project Setup
+The first step is to create the CMake project and since I've never used Pybind11, I want to learn how to use it.
+Creating a PyBind11 "Hello world" was surprisingly easy.
+
+First, this must be added to the CMakeLists.txt
+<code>
+set(PYBIND11_FINDPYTHON ON)
+find_package(pybind11 CONFIG REQUIRED)
+</code>
+
+Then, in C++, include PyBind11
+<code>
+`#include <pybind11/pybind11.h>`
+</code>
+and declare the PyBind11 module.
+<code>
+`PYBIND11_MODULE(tabby, m)`
+`{`
+   ` m.doc() = "pybind11 example plugin"; // optional module docstring`
+
+    `m.def("add", &add, "A function that adds two numbers");`
+`}`
+</code>
+Here, `add` is simply a function that adds two integers which is not worth showing.
+
+After compilation, a shared object file is created.
+When importing the module from Python, the shared object is automatically loaded without any other intervention from my part.
+The function can now be called from Python.
+It was surprisingly easy to use.
+
+Here is the "hello world" example in Python.
+The result printed is left as an exercise to the reader to determine.
+
+import CodePreview from '../../components/CodePreview.astro';
+
+<CodePreview id='import-tabby' fileName='test.py' code={`import tabby\nprint(tabby.add(2, 3))`} language='python' output='5'>
+</CodePreview>
+
+## Data Structures
+Now that I know how to call C++ code from Python, it's time to start thinking about what C++ to write.
+Let's dig into how the three frameworks represent data.
+
+### Pandas
+The most commonly used data structure in Pandas is the DataFrame.
+A DataFrame, according to the comments in the code, is a "two-dimensional, size-mutable, potentially heterogeneous tabular data [structure] [...] with labeled axes (rows and columns)".
+It inherits from the NDFrame class, which is just like a DataFrame but n-dimensional.
+A NDFrame mentions the use of a Manager class to manage and hold the data.
+In the case of a DataFrame, the Manager is a BlockManager.
+A BlockManager holds a sequence of blocks and each block contains a numpy ndarray.
+From NumPy's documentation: "An ndarray is a (usually fixed-size) multidimensional container of items of the same type and size".<sup>[1](#1)</sup>
+This means that each block contains homogeneous data and that the data has a 2-D shape.
+The BlockManager also holds a sequence of objects which are used to label the rows and columns.
+Loading a sample dataset can help us see how Pandas uses blocks.
+
+<CodePreview id='pandas-block'
+code={
+`import pandas as pd\n
+northeast_pd = pd.read_csv('hourly-weather-surface-brazil-southeast-region/north.csv')
+print(northeast_pd.shape)
+print(northeast_pd._mgr.blocks)
+print(northeast_pd._mgr.blocks[0].values[0].shape)
+`
+}
+output={`(8392320, 27)\n(NumpyBlock: [ 3  4  5  6  8  9 10 11 12 13 18 19 24 25 26], 15 x 8392320, dtype: float64, NumpyBlock: [ 0  7 14 15 16 17], 6 x 8392320, dtype: int64, NumpyBlock: [ 1  2 20 21 22 23], 6 x 8392320, dtype: object)\n(8392320,)`}
+language='python'>
+</CodePreview>
+
+We can see that the number of blocks for each data type corresponds to the number of columns with that data type.
+Also, the shape of the values contained in one block is 1D.
+In other words, Pandas uses 1 block per column and regroups them by data type.
+So each column is represented by a NumPy ndarray.
+This means that Pandas offloads a lot of the complexity to NumPy.
+For instance, the problem of adding many rows is handled by NumPy.
+
+### Pyarrow
+
+
+### Polars
+Polars is interesting as it has 2 main classes to represent frames: DataFrame and LazyFrame.
+A LazyFrame is used to hold data and supports lazy computations, or computations that occur only when they are needed.
+This allows for some optimizations to be made before actually running the computation.
+In my case, I'll only look at the DataFrame to keep it simple and equal for all libraries.
+
+
+### References
+<a id="1">[1]</a>
+The N-dimensional array (ndarray). NumPy. Retrieved from https://numpy.org/doc/stable/reference/arrays.ndarray.html. (Accessed on May 30, 2025)
