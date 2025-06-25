@@ -1,19 +1,30 @@
 ---
-title: 'Tabby: Exploring Tabular Libraries Under The Hood | Part 1 - Setup'
+title: 'Tabby: Exploring Tabular Libraries Under The Hood | Part 1 - Data Structures and CSVs'
 description: 'A small implementation of pyarrow/pandas/polars to better understand how they work and how they can be optimized.'
 pubDate: 'May 10 2025'
 heroImage: '/blog-placeholder-5.jpg'
 ---
+import CodePreview from '../../components/CodePreview.astro';
 
 ## Introduction
-I recently got my first data science job (Yay!) and we operate on large datasets.
+I recently got my first data engineering job (Yay!).
+During my first Jira ticket, I realized that we operate on large datasets.
 Dataframes can approach the 100s of GBs, which is a lot more than many personal computers or VMs can handle.
 At this scale, performance issues can have a serious increase in runtime.
 It quickly became obvious that how the data is saved in a dataframe matters a lot too.
 For example, one extra byte per row over hundreds of millions of rows just became hundreds of megabytes.
 Therefore, the data type used but also the memory overhead are extremely important considerations.
+I also realized that I don't much about how data science libraries like Pandas work.
+I have taken filters, selects, joins, aggregations for granted but I don't really understand what does into making these work.
+Of course, the algorithms used matter, but how can these operations be accelerated?
+How do these work on large amounts of data?
+For example, if the column of a dataframe is represented in a contiguous segment of memory and we perform a filter operation, then the column could become fragmented in memory.
+Another puzzling use case is what happens when millions of rows are concatenated?
+We can't just malloc megabytes, neither can we grow the current piece of memory.
+We also don't want to copy everything into a new segment of memory as this is highly inefficient.
+Understanding how such frameworks work is interesting since many concepts come into play, from algorithms to efficient memory usage, data oriented design, database design (because a dataframe is really just an in-memory database), and parallelism (using thread-level parallelism, parallel operations like SIMD, or GPUs).
 The frameworks that I have come across so far are Pandas, the longstanding go-to, Pyarrow which is another alternative developed by Apache which is now a supported backend by Pandas, and Polars which is the new kid on the block that is written in Rust because Rust is the only acceptable progamming language at the moment.
-In this article, I want to explore how these frameworks represent data and execute common operations with performance in mind.
+In this article, I want to compare and explore how these frameworks represent data and execute common operations with performance in mind.
 Some of the questions I have is how are millions of rows layed out in memory and how do the frameworks make it easy and efficient to add millions of rows more?
 How do common operations like subset selection, filters, joins, concatenations, group by, and drop duplicates work?
 How can these common operations be optimized on modern server hardware?
@@ -34,47 +45,32 @@ First, I'll implement all the operations in a basic, single-threaded fashion.
 Then, I'll some optimizations techniques such as multithreading, SIMD, and perhaps CUDA too to see how much more speed⚡🚀💨 I can get.
 I'll be using Kaggle's <i>Climate Weather Surface of Brazil - Hourly</i><sup>[1](#1)</sup> dataset for different benchmarks as it has a decent volume for testing on a personal machine.
 
-## Project Setup
-The first step is to create the CMake project and since I've never used Pybind11, I want to learn how to use it.
-Creating a PyBind11 "Hello world" was surprisingly easy.
-
-First, this must be added to the CMakeLists.txt
-<code>
-set(PYBIND11_FINDPYTHON ON)
-find_package(pybind11 CONFIG REQUIRED)
-</code>
-
-Then, in C++, include PyBind11
-<code>
-`#include <pybind11/pybind11.h>`
-</code>
-and declare the PyBind11 module.
-<code>
-`PYBIND11_MODULE(tabby, m)`
-`{`
-   ` m.doc() = "pybind11 example plugin"; // optional module docstring`
-
-    `m.def("add", &add, "A function that adds two numbers");`
-`}`
-</code>
-Here, `add` is simply a function that adds two integers which is not worth showing.
-
-After compilation, a shared object file is created.
-When importing the module from Python, the shared object is automatically loaded without any other intervention from my part.
-The function can now be called from Python.
-It was surprisingly easy to use.
-
-Here is the "hello world" example in Python.
-The result printed is left as an exercise to the reader to determine.
-
-import CodePreview from '../../components/CodePreview.astro';
-
-<CodePreview id='import-tabby' fileName='test.py' code={`import tabby\nprint(tabby.add(2, 3))`} language='python' output='5'>
-</CodePreview>
-
 ## Data Structures
-Now that I know how to call C++ code from Python, it's time to start thinking about what C++ to write.
-Let's dig into how the three frameworks represent data.
+The first consideration about a tabular library is how it represents data in memory.
+To illustrate the importance of good data structures and memory usage, I'll use an example.
+Imagine you want to collect and analyze information about tweets.
+You could want to collect data like the author's name and username, the date and time at which it was posted, the content of the tweet, the number of likes, the number of views, the number of comments, and the number of retweets.
+Then, in an object-oriented fashion, you could model each tweet as such:
+<CodePreview id='tweet-class-py'
+code={
+`
+class Tweet:
+    author_name: str
+    author_username: str
+    datetime: datetime.datetime
+    text: str
+    num_likes: int
+    num_views: int
+    num_comments: int
+    num_retweets: int
+`
+}
+language='python'>
+</CodePreview>
+Let's say you want to analyze the tweets over a day and for the given day, there were 100M tweets posted.
+Each string in Python is represented as an object.
+A Datetime is also an object.
+
 
 ### Pandas
 The most commonly used data structure in Pandas is the DataFrame.
@@ -113,9 +109,48 @@ For instance, the problem of adding many rows is handled by NumPy.
 
 ### Polars
 Polars is interesting as it has 2 main classes to represent frames: DataFrame and LazyFrame.
-A LazyFrame is used to hold data and supports lazy computations, or computations that occur only when they are needed.
-This allows for some optimizations to be made before actually running the computation.
-In my case, I'll only look at the DataFrame to keep it simple and equal for all libraries.
+A LazyFrame is used to hold data and it supports lazy computations, or computations that occur only when they are needed.
+This allows for optimizations to be made before actually running the computation.
+In my case, I'll only look at the DataFrame to keep it simple and fair across all libraries.
+
+
+## Project Setup
+The first step is to create the CMake project and since I've never used Pybind11, I want to learn how to use it.
+Creating a PyBind11 "Hello world" was surprisingly easy.
+
+First, this must be added to the CMakeLists.txt
+<code>
+set(PYBIND11_FINDPYTHON ON)
+find_package(pybind11 CONFIG REQUIRED)
+</code>
+
+Then, in C++, include PyBind11
+<code>
+`#include <pybind11/pybind11.h>`
+</code>
+and declare the PyBind11 module.
+<code>
+`PYBIND11_MODULE(tabby, m)`
+`{`
+   ` m.doc() = "pybind11 example plugin"; // optional module docstring`
+
+    `m.def("add", &add, "A function that adds two numbers");`
+`}`
+</code>
+Here, `add` is simply a function that adds two integers which is not worth showing.
+
+After compilation, a shared object file is created.
+When importing the module from Python, the shared object is automatically loaded without any other intervention from my part.
+The function can now be called from Python.
+It was surprisingly easy to use.
+
+Here is the "hello world" example in Python.
+The result printed is left as an exercise to the reader to determine.
+
+<CodePreview id='import-tabby' fileName='test.py' code={`import tabby\nprint(tabby.add(2, 3))`} language='python' output='5'>
+</CodePreview>
+
+
 
 
 ### References
