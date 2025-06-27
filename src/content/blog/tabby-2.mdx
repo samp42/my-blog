@@ -1,0 +1,34 @@
+---
+title: 'Tabby: Exploring Tabular Libraries Under The Hood | Part 2 - Reading CSVs'
+description: 'A small implementation of a pyarrow/pandas/polars like li to better understand how they work and how they can be optimized.'
+pubDate: 'May 10 2025'
+heroImage: '/blog-placeholder-5.jpg'
+---
+import CodePreview from '../../components/CodePreview.astro';
+
+## Introduction
+In the first article, I covered the data structures and memory layout used by tabular libraries and implemented those data structures in Tabby.
+I also tested concatenation of dataframes.
+You might be wondering how I got the data to concatenate the dataframes.
+In this article, we'll talk more extensively about how data science frameworks ingest large amount of data from files.
+I'll only cover CSVs in the name of simplicity as CSV is a very simple format to decode.
+
+## Approach
+One could think that reading a file is simple.
+Just read the file with the standard library offered in either Python or C++ depending on the implementation and parse it.
+This approach has some drawbacks.
+First, when loading files with gigabytes of data, the memory usage will be very high which we want to avoid.
+Second, many I/O syscalls will be happening.
+
+A simple approach in Python could look like this:
+<CodePreview
+code={
+`import pandas as pd\n
+northeast_pd = pd.read_csv('hourly-weather-surface-brazil-southeast-region/north.csv')
+print(northeast_pd.shape)
+print(northeast_pd._mgr.blocks)
+print(northeast_pd._mgr.blocks[0].values[0].shape)
+`
+}
+language='python'>
+</CodePreview>
