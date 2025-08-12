@@ -1,6 +1,6 @@
 ---
 title: 'Tabby: Exploring Tabular Libraries Under The Hood | Part 1 - Data Structures and Memory'
-description: 'A small implementation of a pyarrow/pandas/polars like li to better understand how they work and how they can be optimized.'
+description: 'A small implementation of a pyarrow/pandas/polars like librairies to better understand how they work and how they can be optimized.'
 pubDate: 'May 10 2025'
 heroImage: '/blog-placeholder-5.jpg'
 ---
@@ -8,15 +8,15 @@ import CodePreview from '../../components/CodePreview.astro';
 
 ## Introduction
 I recently got my first data engineering job (Yay!).
-During my first Jira ticket, I realized that we operate on large datasets.
-Dataframes can approach the 100s of GBs, which is a lot more than many personal computers or VMs can handle.
+During my first Jira ticket, I realized early on that we operate on large datasets.
+In fact, I quickly encountered dataframes approaching the 100s of GBs, which is a lot more than many personal computers or VMs can handle.
 At this scale, performance issues can have a serious increase in runtime.
 It quickly became obvious that how the data is saved in a dataframe matters a lot too.
 For example, one extra byte per row over hundreds of millions of rows just became hundreds of megabytes.
 Therefore, the data type used but also the memory overhead are extremely important considerations.
-I also realized that I don't much about how data science libraries like Pandas work.
-I have taken filters, selects, joins, aggregations for granted but I don't really understand what does into making these work.
-Of course, the algorithms used matter, but how can these operations be accelerated?
+I also realized that I don't know much about how data science libraries like Pandas work.
+I have taken filters, selects, joins, aggregations for granted but I don't really understand what goes into making these work.
+Of course, the algorithms used matter, but how can these operations be run fast on current hardware?
 How do these work on large amounts of data?
 For example, if the column of a dataframe is represented in a contiguous segment of memory and we perform a filter operation, then the column could become fragmented in memory.
 Another puzzling use case is what happens when millions of rows are concatenated?
@@ -112,6 +112,10 @@ Polars is interesting as it has 2 main classes to represent frames: DataFrame an
 A LazyFrame is used to hold data and it supports lazy computations, or computations that occur only when they are needed.
 This allows for optimizations to be made before actually running the computation.
 In my case, I'll only look at the DataFrame to keep it simple and fair across all libraries.
+
+## Basic DataFrame Implementation
+Now that we have looked at how a dataframe is represented across Pandas and Polars, let's write out the basic classes in their essential fields.
+
 
 
 ## Project Setup
