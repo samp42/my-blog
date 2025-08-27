@@ -21,6 +21,20 @@ root {
   --box-shadow: 0 2px 6px rgba(var(--gray), 25%),
     0 8px 24px rgba(var(--gray), 33%), 0 16px 32px rgba(var(--gray), 33%);
 }
+
+:root {
+  --background-color: #fff;
+  --border-color: #454648; /* A light gray */
+  --accent-bg-color: #f7fafc; /* A very light gray */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background-color: #1a202c;
+    --border-color: #2d3748;
+    --accent-bg-color: #2d3748;
+  }
+}
 @font-face {
   font-family: 'Atkinson';
   src: url('/fonts/atkinson-regular.woff') format('woff');
@@ -102,9 +116,7 @@ textarea {
 input {
   font-size: 16px;
 }
-table {
-  width: 100%;
-}
+
 img {
   max-width: 100%;
   height: auto;
@@ -157,4 +169,33 @@ hr {
   clip-path: inset(50%);
   /* added line to stop words getting smushed together (as they go onto separate lines and some screen readers do not understand line feeds as a space */
   white-space: nowrap;
+}
+
+/* Style for the main table element */
+table {
+  width: 100%;
+  border-collapse: collapse; /* This is key for clean borders */
+  margin: 1.5rem 0; /* Adds space above and below the table */
+  font-size: 0.95rem;
+  line-height: 1.5;
+  background-color: var(--background-color); /* Better for light/dark mode */
+}
+
+/* Style for table header and data cells */
+th,
+td {
+  border: 1.5px solid var(--border-color); /* Uses a CSS variable for consistency */
+  padding: 0.75rem; /* Essential for spacing inside cells */
+  text-align: left;
+}
+
+/* Specific style for header cells */
+th {
+  background-color: var(--accent-bg-color);
+  font-weight: 600;
+}
+
+/* Optional: Add a subtle stripe effect for easier reading */
+tbody tr:nth-child(even) {
+  background-color: var(--accent-bg-color);
 }
