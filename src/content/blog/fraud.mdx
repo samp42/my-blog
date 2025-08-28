@@ -34,7 +34,7 @@ The dataset I chose is the [Cifer Fraud Detection](https://huggingface.co/datase
 
 It contains 21M rows which is quite substantial for training machine learning models.
 The rows are separated in 14 parts which is intended to be use in federated learning but in my case I will just use it as a single dataset.
-The data is high quality and structured with features representing transaction details, user behavior, and labels indicating fraudulent activity.
+The data is high quality, exempt of null values, and structured with features representing transaction details, user behavior, and labels indicating fraudulent activity.
 Here are the features as described on the dataset page:
 | Feature Name | Description |
 |---|---|
@@ -42,7 +42,7 @@ Here are the features as described on the dataset page:
 | type | Transaction type: CASH-IN, CASH-OUT, DEBIT, PAYMENT, TRANSFER |
 | amount | Transaction value in simulated currency |
 | nameOrig | Anonymized ID of sender |
-| oldbalanceOrg | Sender’s balance before transaction |
+| oldbalanceOrig | Sender’s balance before transaction |
 | newbalanceOrig | Sender’s balance after transaction |
 | nameDest | Anonymized ID of recipient |
 | oldbalanceDest | Recipient’s balance before transaction (if applicable) |
@@ -76,4 +76,29 @@ By doing this, the model will learn to pay more attention to the fraudulent tran
 More approaches are possible to deal with imbalanced datasets, but these two will be sufficient for this exploration.
 
 ## Data Preparation
+As we saw in the previous section, the dataset as a few columns with relevant features.
+The `type` column represents a categorical feature which will need to be encoded.
+I will use one-hot encoding since there are few values and it won't introduce an order or a bigger magnitude to any category.
+As for the features present in the raw dataset, this is a great starting point, but these features alone would likely not allow for a model that learns patterns more
+intricate then wether a transaction is of a certain type and involves a big amount of money.
+We need to enhance the dataset with some extra features.
+While I don't know what makes a transaction fraudulent, I have some clues that could be interesting to test.
+My approach will be to add features that I think could be relevant and let the models figure out which are and which are not.
+It will be interesting to see in the end what actually matters.
+Here are some of the features that I will add to the dataset:
+- Z-score for each transaction of a sender indicating how far from the average transaction of a specific sender it is
+- Z-score for each transaction of a receiver
+- Number of transactions of the same amount in a single step, 24 steps (1 day), 168 steps (1 week), all steps
+- Number of transactions by a sender in a single step, 24 steps (1 day), 168 steps (1 week), all steps
+- Number of transactions by a receiver in a single step, 24 steps (1 day), 168 steps (1 week), all steps
+- Number of transactions an individual is involved in in a single step, 24 steps (1 day), 168 steps (1 week), all steps
+- Number of unique receivers per sender in a single step, 24 steps (1 day), 168 steps (1 week), all steps
+- Number of unique senders per receiver in a single step, 24 steps (1 day), 168 steps (1 week), all steps
+- Total amount received by an individual in a single step, 24 steps (1 day), 168 steps (1 week), all steps
+- Wether a sender has had a flagged transaction before
+- Wether a receiver has had a flagged transaction before
+- Wether a sender is also a receiver
 
+I decided to create most of the features based on 1 hour, 1 day, 1 week, and 1 month to hopefully detect some patterns in time.
+The choice of the last feature, namely wether a sender is also a receiver, comes from the intuition that maybe a fraudster only receives money from his account.
+This will make an extensive feature set that will, I hope, capture most if not all of the possible strategies.
