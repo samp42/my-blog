@@ -62,3 +62,18 @@ This will help us understand the extent of the imbalance and guide our approach 
 We can see that the number of legitimate transactions far outweighs the number of fraudulent ones, highlighting the class imbalance issue we need to address.
 In fact, 99.8% of the transactions are legitimate, while only 0.2% are fraudulent.
 We will have to employ techniques such as resampling, cost-sensitive learning, or anomaly detection to effectively train our models on this imbalanced dataset.
+
+To mitigate this, I'll experiment with two approaches.
+First, I'll use undersampling to reduce the number of legitimate transactions.
+This involves randomly removing a portion of the legitimate transactions to create a more balanced dataset.
+The advantage of this approach is that it can help the model focus on the minority class (fraudulent transactions) without being overwhelmed by the majority class (legitimate transactions).
+It also does not require duplicating the minority class, which can lead to overfitting.
+With this dataset, I'm lucky to be able to afford to lose some data from the majority class without significantly impacting the model's ability to learn.
+In fact, there are 27,470 fraudulent transactions which is a manageable number for training.
+Second, I'll use cost-sensitive learning to give more importance to the minority class during training.
+This involves adjusting the loss function to penalize misclassifications of the minority class more than the majority class.
+By doing this, the model will learn to pay more attention to the fraudulent transactions, which can improve its performance on this imbalanced dataset.
+More approaches are possible to deal with imbalanced datasets, but these two will be sufficient for this exploration.
+
+## Data Preparation
+

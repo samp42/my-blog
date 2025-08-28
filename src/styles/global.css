@@ -33,6 +33,7 @@ root {
     --background-color: #1a202c;
     --border-color: #2d3748;
     --accent-bg-color: #2d3748;
+    --color: #fff;
   }
 }
 @font-face {
@@ -179,6 +180,7 @@ table {
   font-size: 0.95rem;
   line-height: 1.5;
   background-color: var(--background-color); /* Better for light/dark mode */
+  color: var(--color);
 }
 
 /* Style for table header and data cells */
