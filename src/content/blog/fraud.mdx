@@ -34,7 +34,7 @@ The dataset I chose is the [Cifer Fraud Detection](https://huggingface.co/datase
 
 It contains 21M rows which is quite substantial for training machine learning models.
 The rows are separated in 14 parts which is intended to be use in federated learning but in my case I will just use it as a single dataset.
-The data is high quality, exempt of null values, and structured with features representing transaction details, user behavior, and labels indicating fraudulent activity.
+The data is high quality, exempt of missing values, and structured with features representing transaction details, user behavior, and labels indicating fraudulent activity.
 Here are the features as described on the dataset page:
 | Feature Name | Description |
 |---|---|
@@ -88,13 +88,13 @@ It will be interesting to see in the end what actually matters.
 Here are some of the features that I will add to the dataset:
 - Z-score for each transaction of a sender indicating how far from the average transaction of a specific sender it is
 - Z-score for each transaction of a receiver
-- Number of transactions of the same amount in a single step, 24 steps (1 day), 168 steps (1 week), all steps
-- Number of transactions by a sender in a single step, 24 steps (1 day), 168 steps (1 week), all steps
-- Number of transactions by a receiver in a single step, 24 steps (1 day), 168 steps (1 week), all steps
-- Number of transactions an individual is involved in in a single step, 24 steps (1 day), 168 steps (1 week), all steps
-- Number of unique receivers per sender in a single step, 24 steps (1 day), 168 steps (1 week), all steps
-- Number of unique senders per receiver in a single step, 24 steps (1 day), 168 steps (1 week), all steps
-- Total amount received by an individual in a single step, 24 steps (1 day), 168 steps (1 week), all steps
+- Number of transactions of the same amount in a single step, 24 steps (1 day), 168 steps (1 week), all steps (1 month)
+- Number of transactions by a sender in a single step, 24 steps, 168 steps, all steps
+- Number of transactions by a receiver in a single step, 24 steps, 168 steps, all steps
+- Number of transactions an individual is involved in in a single step, 24 steps, 168 steps, all steps
+- Number of unique receivers per sender in a single step, 24 steps, 168 steps, all steps
+- Number of unique senders per receiver in a single step, 24 steps, 168 steps, all steps
+- Total amount received by an individual in a single step, 24 steps, 168 steps, all steps
 - Wether a sender has had a flagged transaction before
 - Wether a receiver has had a flagged transaction before
 - Wether a sender is also a receiver
