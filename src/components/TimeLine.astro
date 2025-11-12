@@ -1,0 +1,23 @@
+---
+interface TimeLineItemProps {
+  dateFrom: Date;
+  dateTo: Date | 'Present';
+  title: String;
+  subtitle: String;
+  description: String;
+}
+
+interface TimeLineProps {
+  items: TimeLineItemProps[];
+}
+
+const { items } = Astro.props;
+---
+
+<ul>
+  {
+    items.map((item: TimeLineItemProps) => (
+      <li>{item.dateFrom.getFullYear()}</li>
+    ))
+  }
+</ul>
